@@ -11,6 +11,13 @@
 #define CYAN "\033[36m"
 #define WHITE "\033[37m"
 
+#define GRAY "\033[90m"
+#define ORANGE "\033[38;5;208m"
+#define PINK "\033[38;5;213m"
+#define TEAL "\033[38;5;30m"
+#define LIME "\033[38;5;118m"
+#define GOLD "\033[38;5;220m"
+
 #define BMP_PATH "logo.bmp"
 
 #define BMP_HEADER 54
@@ -18,6 +25,34 @@
 #define BMP_WIDTH 128
 #define BMP_HEIGHT 64
 #define BMP_IMAGE_SIZE ((BMP_WIDTH * BMP_HEIGHT) / 8)
+
+const char* patternNames[] = {"Blank", "Heart", "Square"};
+const int patternAmount = 3;
+
+const int heart[7][7] = {
+    {0,1,1,0,1,1,0},
+    {1,1,1,1,1,1,1},
+    {1,1,1,1,1,1,1},
+    {0,1,1,1,1,1,0},
+    {0,0,1,1,1,0,0},
+    {0,0,0,1,0,0,0},
+    {0,0,0,0,0,0,0}
+};
+
+const int square[5][5] = {
+    {1,1,1,1,1},
+    {1,0,0,0,1},
+    {1,0,0,0,1},
+    {1,0,0,0,1},
+    {1,1,1,1,1}
+};
+
+typedef struct
+{
+    int width;
+    int height;
+    const int* pattern;
+} Pattern;
 
 typedef struct
 {
@@ -38,6 +73,13 @@ typedef struct
     int importantColors;
 } BmpHeader;
 
+Pattern patterns[] = {
+    {7, 7, &heart[0][0]},
+    {5, 5, &square[0][0]}
+};
+
+int selectPattern();
+void writeBmp(char* bmpPath, int patternId);
 void readBmp(char * bmpPath);
 
 int main() 
@@ -45,11 +87,52 @@ int main()
 
     system("clear");
 
+    int patternSelected = selectPattern();
+
+    writeBmp(BMP_PATH, patternSelected);
+
+    readBmp(BMP_PATH);
+
+    printf(YELLOW "[DEBUG]" RESET " Successfully executed the code.\n");
+    return 1;
+
+}
+
+int selectPattern()
+{
+
+    printf(GREEN "[INFO]" RESET " Displaying all the available patterns to draw.\n");
+    printf(MAGENTA "+----------- Available Patterns -----------+\n" RESET);
+    printf(MAGENTA "|" RESET " Blank   :   " CYAN "0\n" RESET);
+    printf(MAGENTA "|" RESET " Heart   :   " CYAN "1\n" RESET);
+    printf(MAGENTA "|" RESET " Square   :   " CYAN "2\n" RESET);
+    printf(MAGENTA "+------------------------------------------+\n" RESET);
+    printf(TEAL "[INPUT]" RESET " Enter the desired pattern to draw.\n   >> ");
+    
+    int selectedOption;
+    scanf("%d", &selectedOption);
+
+    if (selectedOption >= 0 && selectedOption < patternAmount)
+    {
+        printf(GREEN "[INFO]" RESET " Selected pattern [" BLUE "%s" RESET "].\n", patternNames[selectedOption]);
+        return selectedOption;
+    }
+    else
+    {
+        printf(RED "[ERROR]" RESET " Entry format invalid. Selected Blank Pattern.\n");
+        return 0;
+    }
+    
+}
+
+void writeBmp(char* bmpPath, int patternId)
+{
+
     FILE* bmp = fopen(BMP_PATH, "wb");
     if (!bmp)
     {
         printf(RED "[ERROR]" RESET " Couldn't create file [" BLUE "%s" RESET "].\n", BMP_PATH);
-        return -1;
+        return;
     }
 
     BmpHeader bmpHdr;
@@ -59,6 +142,33 @@ int main()
     unsigned char pixels[BMP_IMAGE_SIZE];
     memset(pixels, 0x00, BMP_IMAGE_SIZE);
 
+    if (patternId > 0)
+    {
+        Pattern pattern = patterns[patternId - 1];
+
+        int cx = BMP_WIDTH / 2;
+        int cy = BMP_HEIGHT / 2;
+
+        for (int y = 0; y < pattern.height; y++)
+        {
+            for (int x = 0; x < pattern.width; x++)
+            {
+                int value = pattern.pattern[y * pattern.width + x];
+
+                if (value)
+                {
+                    int px = cx - pattern.width / 2 + x;
+                    int py = cy - pattern.height / 2 + y;
+
+                    int byteIndex = (BMP_HEIGHT - 1 - py) * (BMP_WIDTH / 8) + (px / 8);
+                    int bit = 7 - (px % 8);
+
+                    pixels[byteIndex] |= (1 << bit);
+                }
+            }
+        }
+    }
+    
     bmpHdr.signature[0] = 'B';
     bmpHdr.signature[1] = 'M';
     bmpHdr.fileSize = BMP_HEADER + BMP_IMAGE_SIZE + sizeof(palette);
@@ -93,17 +203,16 @@ int main()
     fwrite(&bmpHdr.importantColors, sizeof(int), 1, bmp);
     fwrite(palette, sizeof(unsigned char), 8, bmp);
     fwrite(pixels, sizeof(unsigned char), BMP_IMAGE_SIZE, bmp);
-
+    
     fclose(bmp);
 
-    readBmp(BMP_PATH);
+    printf(GREEN "[INFO]" RESET " Successfully created BMP logo [" BLUE "%s" RESET "].\n", bmpPath);
 
-    printf(YELLOW "[DEBUG]" RESET " Successfully executed the code.\n");
-    return 1;
+    return;
 
 }
 
-void readBmp(char * bmpPath)
+void readBmp(char* bmpPath)
 {
     
     FILE* bmp = fopen(bmpPath, "rb");
