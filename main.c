@@ -19,6 +19,7 @@
 #define GOLD "\033[38;5;220m"
 
 #define BMP_PATH "logo.bmp"
+#define ARDUINO_EXPORT_PATH "arduino_logo.h"
 
 #define BMP_HEADER 54
 
@@ -120,6 +121,8 @@ int selectPattern()
     else
     {
         printf(RED "[ERROR]" RESET " Entry format invalid. Selected Blank Pattern.\n");
+        int c;
+        while ((c = getchar()) != '\n' && c != EOF);
         return 0;
     }
     
@@ -222,8 +225,6 @@ void readBmp(char* bmpPath)
         return;
     }
 
-    printf(GREEN "[INFO]" RESET " Displaying BMP file header for [" BLUE "%s" RESET "].\n", bmpPath);
-
     BmpHeader bmpHdr;
 
     fread(&bmpHdr.signature, sizeof(char), 2, bmp);
@@ -242,23 +243,104 @@ void readBmp(char* bmpPath)
     fread(&bmpHdr.paletteNbColors, sizeof(int), 1, bmp);
     fread(&bmpHdr.importantColors, sizeof(int), 1, bmp);
 
-    printf(MAGENTA "+-------------------- BMP HEADER --------------------+\n" RESET);
-    printf(MAGENTA "|" RESET " Signature         :" CYAN " [%c%c]\n" RESET, bmpHdr.signature[0], bmpHdr.signature[1]);
-    printf(MAGENTA "|" RESET " File Size         :" CYAN " [%d]\n" RESET, bmpHdr.fileSize);
-    printf(MAGENTA "|" RESET " Reserved          :" CYAN " [%d]\n" RESET, bmpHdr.reserved);
-    printf(MAGENTA "|" RESET " Data Offset       :" CYAN " [%d]\n" RESET, bmpHdr.dataOffset);
-    printf(MAGENTA "|" RESET " Header Size       :" CYAN " [%d]\n" RESET, bmpHdr.headerSize);
-    printf(MAGENTA "|" RESET " Image Width       :" CYAN " [%d]\n" RESET, bmpHdr.imageWidth);
-    printf(MAGENTA "|" RESET " Image Height      :" CYAN " [%d]\n" RESET, bmpHdr.imageHeight);
-    printf(MAGENTA "|" RESET " Planes            :" CYAN " [%hd]\n" RESET, bmpHdr.planes);
-    printf(MAGENTA "|" RESET " Bits per Pixel    :" CYAN " [%hd]\n" RESET, bmpHdr.bpp);
-    printf(MAGENTA "|" RESET " Compression       :" CYAN " [%d]\n" RESET, bmpHdr.compression);
-    printf(MAGENTA "|" RESET " Data Size         :" CYAN " [%d]\n" RESET, bmpHdr.dataSize);
-    printf(MAGENTA "|" RESET " H Resolution      :" CYAN " [%d]\n" RESET, bmpHdr.hResolution);
-    printf(MAGENTA "|" RESET " V Resolution      :" CYAN " [%d]\n" RESET, bmpHdr.vResolution);
-    printf(MAGENTA "|" RESET " Palette Colors    :" CYAN " [%d]\n" RESET, bmpHdr.paletteNbColors);
-    printf(MAGENTA "|" RESET " Important Colors  :" CYAN " [%d]\n" RESET, bmpHdr.importantColors);
-    printf(MAGENTA "+----------------------------------------------------+\n" RESET);
+    printf(TEAL "[INPUT]" RESET " Display BMP file header ? ( yes | no )\n   >> ");
+    char input_dfh[8];
+    scanf("%7s", input_dfh);
+    if (strcmp(input_dfh, "yes") == 0 || strcmp(input_dfh, "y") == 0)
+    {
+        printf(GREEN "[INFO]" RESET " Displaying BMP file header for [" BLUE "%s" RESET "].\n", bmpPath);
+
+        printf(MAGENTA "+-------------------- BMP HEADER --------------------+\n" RESET);
+        printf(MAGENTA "|" RESET " Signature         :" CYAN " [%c%c]\n" RESET, bmpHdr.signature[0], bmpHdr.signature[1]);
+        printf(MAGENTA "|" RESET " File Size         :" CYAN " [%d]\n" RESET, bmpHdr.fileSize);
+        printf(MAGENTA "|" RESET " Reserved          :" CYAN " [%d]\n" RESET, bmpHdr.reserved);
+        printf(MAGENTA "|" RESET " Data Offset       :" CYAN " [%d]\n" RESET, bmpHdr.dataOffset);
+        printf(MAGENTA "|" RESET " Header Size       :" CYAN " [%d]\n" RESET, bmpHdr.headerSize);
+        printf(MAGENTA "|" RESET " Image Width       :" CYAN " [%d]\n" RESET, bmpHdr.imageWidth);
+        printf(MAGENTA "|" RESET " Image Height      :" CYAN " [%d]\n" RESET, bmpHdr.imageHeight);
+        printf(MAGENTA "|" RESET " Planes            :" CYAN " [%hd]\n" RESET, bmpHdr.planes);
+        printf(MAGENTA "|" RESET " Bits per Pixel    :" CYAN " [%hd]\n" RESET, bmpHdr.bpp);
+        printf(MAGENTA "|" RESET " Compression       :" CYAN " [%d]\n" RESET, bmpHdr.compression);
+        printf(MAGENTA "|" RESET " Data Size         :" CYAN " [%d]\n" RESET, bmpHdr.dataSize);
+        printf(MAGENTA "|" RESET " H Resolution      :" CYAN " [%d]\n" RESET, bmpHdr.hResolution);
+        printf(MAGENTA "|" RESET " V Resolution      :" CYAN " [%d]\n" RESET, bmpHdr.vResolution);
+        printf(MAGENTA "|" RESET " Palette Colors    :" CYAN " [%d]\n" RESET, bmpHdr.paletteNbColors);
+        printf(MAGENTA "|" RESET " Important Colors  :" CYAN " [%d]\n" RESET, bmpHdr.importantColors);
+        printf(MAGENTA "+----------------------------------------------------+\n" RESET);
+    }
+    else if (strcmp(input_dfh, "no") == 0 || strcmp(input_dfh, "n") == 0)
+    {
+        printf(GREEN "[INFO]" RESET " Skipping the display of BMP file header.\n");
+    }
+    else
+    {
+        printf(RED "[ERROR]" RESET " Entry format invalid. Skipping the display of BMP file header.\n");
+        int c;
+        while ((c = getchar()) != '\n' && c != EOF);
+    }
+
+    printf(TEAL "[INPUT]" RESET " Create output file for arduino ? (yes | no)\n   >> ");
+    char input_cof[8];
+    scanf("%7s", input_cof);
+    if (strcmp(input_cof, "yes") == 0 || strcmp(input_cof, "y") == 0)
+    {
+        int widthBytes = (bmpHdr.imageWidth + 7) / 8;
+        int rowSize = ((widthBytes + 3) / 4) * 4;
+        unsigned char* rowData = malloc(rowSize);
+        if (!rowData) 
+        {
+            printf(RED "[ERROR]" RESET " Memory allocation failed.\n");
+            fclose(bmp);
+            return;
+        }
+
+        FILE* ardExprt = fopen(ARDUINO_EXPORT_PATH, "w");
+        if (!ardExprt) {
+            printf(RED "[ERROR]" RESET " Couldn't create file [" BLUE "%s" RESET "].\n", ARDUINO_EXPORT_PATH);
+            free(rowData);
+            fclose(bmp);
+            return;
+        }
+
+        fprintf(ardExprt, "const unsigned char logo[] PROGMEM = {\n");
+
+        fseek(bmp, bmpHdr.dataOffset, SEEK_SET);
+
+        for (int y = bmpHdr.imageHeight - 1; y >= 0; y--) 
+        {
+            fseek(bmp, bmpHdr.dataOffset + y * rowSize, SEEK_SET);
+            fread(rowData, 1, rowSize, bmp);
+
+            for (int i = 0; i < widthBytes; i++)
+            {
+                fprintf(ardExprt, "0x%02X", rowData[i]);
+                if (!(y == 0 && i == widthBytes -1))
+                {
+                    fprintf(ardExprt, ",");
+                }
+            }
+
+            fprintf(ardExprt, "\n");
+        }
+
+        fprintf(ardExprt, "};\n");
+
+        printf(GREEN "[INFO]" RESET " Arduino export file generated [" BLUE "%s" RESET "].\n", ARDUINO_EXPORT_PATH);
+
+        free(rowData);
+    }
+    else if (strcmp(input_cof, "no") == 0 || strcmp(input_cof, "n") == 0)
+    {
+        printf(GREEN "[INFO]" RESET " Skipping creation of output file.\n");
+    }
+    else
+    {
+        printf(RED "[ERROR]" RESET " Entry format invalid. Skipping creation of output file.\n");
+        int c;
+        while ((c = getchar()) != '\n' && c != EOF);
+    }
+    
+    fclose(bmp);
 
     return;
 
