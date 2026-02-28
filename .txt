@@ -1,0 +1,29 @@
+page 1 - appel
+Come eat
+Come down when u can
+Come down fast
+envoi programé -> 0-23h 0-59 min
+custom message programme
+
+page 2 - settings
+langue
+relancer le wifi
+changer de wifi
+restart
+
+page 3 - monitor
+wifi connected ?
+
+page 4 - historique ping
+18h00 - come down
+
+
+// a faire
+accusé de reception
+setup du wifi via hotspot
+mode veille
+batterie
+
+
+// idées
+plusieurs personnes

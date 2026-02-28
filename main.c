@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
 #define RESET "\033[0m"
 #define RED "\033[31m"
@@ -27,8 +28,12 @@
 #define BMP_HEIGHT 64
 #define BMP_IMAGE_SIZE ((BMP_WIDTH * BMP_HEIGHT) / 8)
 
-const char* patternNames[] = {"Blank", "Heart", "Square"};
-const int patternAmount = 3;
+bool inMiddle = false;
+bool border = true;
+bool watermark = false;
+
+const char* patternNames[] = {"Blank", "Heart", "Square", "Bee"};
+const int patternAmount = 4;
 
 const int heart[7][7] = {
     {0,1,1,0,1,1,0},
@@ -48,6 +53,48 @@ const int square[5][5] = {
     {1,1,1,1,1}
 };
 
+const int bee[20][24] = {
+    {0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0},
+    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    {0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0},
+    {0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0},
+    {1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1},
+    {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+    {1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+    {1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1},
+    {0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0},
+    {0, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 0},
+    {0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0},
+    {0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0},
+    {0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0},
+    {0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0},
+    {0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0},
+    {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0},
+    {0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
+    {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+};
+
+typedef struct {
+    char c;
+    unsigned char data[3]; // 3 colonnes, 5 bits utiles
+} Font3x5;
+
+Font3x5 font3x5[] = {
+    {'B', {0b11111, 0b10101, 0b01010}},
+    {'e', {0b01110, 0b10110, 0b01100}},
+    {'p', {0b11110, 0b00101, 0b00010}},
+    {'r', {0b11110, 0b00100, 0b00100}},
+    {'v', {0b00110, 0b11000, 0b00110}},
+    {'0', {0b01110, 0b10001, 0b01110}},
+    {'1', {0b00000, 0b11111, 0b00000}},
+    {'.', {0b00000, 0b10000, 0b00000}},
+    {' ', {0b00000, 0b00000, 0b00000}},
+};
+
+#define FONT3_COUNT (sizeof(font3x5)/sizeof(Font3x5))
+
 typedef struct
 {
     int width;
@@ -59,7 +106,7 @@ typedef struct
 {
     unsigned char signature[2];
     int fileSize;
-    int reserved;
+    int reserved;   
     int dataOffset;
     int headerSize;
     int imageWidth;
@@ -76,7 +123,8 @@ typedef struct
 
 Pattern patterns[] = {
     {7, 7, &heart[0][0]},
-    {5, 5, &square[0][0]}
+    {5, 5, &square[0][0]},
+    {24, 20, &bee[0][0]}
 };
 
 int selectPattern();
@@ -107,6 +155,7 @@ int selectPattern()
     printf(MAGENTA "|" RESET " Blank   :   " CYAN "0\n" RESET);
     printf(MAGENTA "|" RESET " Heart   :   " CYAN "1\n" RESET);
     printf(MAGENTA "|" RESET " Square   :   " CYAN "2\n" RESET);
+    printf(MAGENTA "|" RESET " Bee   :   " CYAN "3\n" RESET);
     printf(MAGENTA "+------------------------------------------+\n" RESET);
     printf(TEAL "[INPUT]" RESET " Enter the desired pattern to draw.\n   >> ");
     
@@ -128,6 +177,95 @@ int selectPattern()
     
 }
 
+void drawPattern(unsigned char* pixels, Pattern pattern, int startX, int startY)
+{
+
+    for (int y = 0; y < pattern.height; y++)
+    {
+        for (int x = 0; x < pattern.width; x++)
+        {
+            int value = pattern.pattern[y * pattern.width + x];
+
+            if (value)
+            {
+                int px = startX + x;
+                int py = startY + y;
+
+                if (px < 0 || px >= BMP_WIDTH || py < 0 || py >= BMP_HEIGHT)
+                {
+                    continue;
+                }
+
+                int byteIndex = (BMP_HEIGHT - 1 - py) * (BMP_WIDTH / 8) + (px / 8);
+                int bit = 7 - (px % 8);
+
+                pixels[byteIndex] |= (1 << bit);
+            }
+        }
+    }
+
+}
+
+void drawFancyBorder(unsigned char* pixels)
+{
+
+    for (int y = 0; y < BMP_HEIGHT; y++)
+    {
+        for (int x = 0; x < BMP_WIDTH; x++)
+        {
+            bool isOuter = x == 0 || x == BMP_WIDTH - 1 || y == 0 || y == BMP_HEIGHT - 1;
+            bool isInner = x == 2|| x == BMP_WIDTH - 3 || y == 2 || y == BMP_HEIGHT - 3;
+
+            bool isCorner = (x < 6 && y < 6) || (x > BMP_WIDTH - 7 && y < 6) || (x < 6 && y > BMP_HEIGHT - 7) || (x > BMP_WIDTH - 7 && y > BMP_HEIGHT - 7);
+
+            if (isOuter || isInner || isCorner)
+            {
+                int byteIndex = (BMP_HEIGHT - 1 - y) * (BMP_WIDTH / 8) + (x / 8);
+                int bit = 7 - (x % 8);
+                pixels[byteIndex] |= (1 << bit);
+            }
+        }
+    }
+
+}
+
+void drawTextSmall(unsigned char* pixels, const char* text, int startX, int startY)
+{
+    int cursorX = startX;
+
+    while (*text)
+    {
+        for (int i = 0; i < FONT3_COUNT; i++)
+        {
+            if (font3x5[i].c == *text)
+            {
+                for (int col = 0; col < 3; col++)
+                {
+                    for (int row = 0; row < 5; row++)
+                    {
+                        if (font3x5[i].data[col] & (1 << row))
+                        {
+                            int px = cursorX + col;
+                            int py = startY + row;
+
+                            if (px < 0 || px >= BMP_WIDTH || py < 0 || py >= BMP_HEIGHT)
+                                continue;
+
+                            int byteIndex = (BMP_HEIGHT - 1 - py) * (BMP_WIDTH / 8) + (px / 8);
+                            int bit = 7 - (px % 8);
+                            pixels[byteIndex] |= (1 << bit);
+                        }
+                    }
+                }
+                break;
+            }
+        }
+
+        cursorX += 4; // 3px + 1 espace
+        text++;
+    }
+}
+
 void writeBmp(char* bmpPath, int patternId)
 {
 
@@ -145,33 +283,40 @@ void writeBmp(char* bmpPath, int patternId)
     unsigned char pixels[BMP_IMAGE_SIZE];
     memset(pixels, 0x00, BMP_IMAGE_SIZE);
 
-    if (patternId > 0)
+    if (border)
+    {
+        drawFancyBorder(pixels);
+    }
+
+    if (patternId > 0) 
     {
         Pattern pattern = patterns[patternId - 1];
 
-        int cx = BMP_WIDTH / 2;
-        int cy = BMP_HEIGHT / 2;
+        int startX;
+        int startY;
 
-        for (int y = 0; y < pattern.height; y++)
+        if (inMiddle)
         {
-            for (int x = 0; x < pattern.width; x++)
-            {
-                int value = pattern.pattern[y * pattern.width + x];
-
-                if (value)
-                {
-                    int px = cx - pattern.width / 2 + x;
-                    int py = cy - pattern.height / 2 + y;
-
-                    int byteIndex = (BMP_HEIGHT - 1 - py) * (BMP_WIDTH / 8) + (px / 8);
-                    int bit = 7 - (px % 8);
-
-                    pixels[byteIndex] |= (1 << bit);
-                }
-            }
+            startX = BMP_WIDTH / 2 - pattern.width / 2;
+            startY = BMP_HEIGHT / 2 - pattern.height / 2;
         }
+        else
+        {
+            startX = BMP_WIDTH - pattern.width - 4;
+            startY = BMP_HEIGHT - pattern.height - 4;
+        }
+
+        drawPattern(pixels, pattern, startX, startY);
+
     }
     
+    if (watermark)
+    {
+        int textX = 2;
+        int textY = BMP_HEIGHT - 7;
+        drawTextSmall(pixels, "Beepr v0.1", textX, textY);
+    }
+
     bmpHdr.signature[0] = 'B';
     bmpHdr.signature[1] = 'M';
     bmpHdr.fileSize = BMP_HEADER + BMP_IMAGE_SIZE + sizeof(palette);
@@ -345,3 +490,6 @@ void readBmp(char* bmpPath)
     return;
 
 }
+
+// S'occuper juste de la création des images ici, comme si un tel faisait ces images
+// Pour la gestion d'un watermark par exemple, on va le dessiner ici, mais pas le placer ici, ca va etre dans le code arduino en fonction des settings genre upRight, downLeft
